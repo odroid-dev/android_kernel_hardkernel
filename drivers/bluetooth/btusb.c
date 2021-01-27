@@ -2740,6 +2740,8 @@ static int btusb_bcm_set_diag(struct hci_dev *hdev, bool enable)
 }
 #endif
 
+static int exist_csr_module = 0;
+
 static int btusb_probe(struct usb_interface *intf,
 		       const struct usb_device_id *id)
 {
@@ -2944,7 +2946,8 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 #ifdef CONFIG_BT_HCIBTUSB_RTL
-	if (id->driver_info & BTUSB_REALTEK) {
+	if (id->driver_info & BTUSB_REALTEK && !exist_csr_module) {
+		BT_DBG("RealTek module detected\n");
 		hdev->setup = btrtl_setup_realtek;
 		hdev->shutdown = btrtl_shutdown_realtek;
 
@@ -2983,6 +2986,10 @@ static int btusb_probe(struct usb_interface *intf,
 	if (id->driver_info & BTUSB_CSR) {
 		struct usb_device *udev = data->udev;
 		u16 bcdDevice = le16_to_cpu(udev->descriptor.bcdDevice);
+#ifdef CONFIG_BT_HCIBTUSB_RTL
+		BT_DBG("CSR module detected\n");
+		exist_csr_module = 1;
+#endif
 
 		/* Old firmware would otherwise execute USB reset */
 		if (bcdDevice < 0x117)
@@ -3049,6 +3056,9 @@ static void btusb_disconnect(struct usb_interface *intf)
 {
 	struct btusb_data *data = usb_get_intfdata(intf);
 	struct hci_dev *hdev;
+#ifdef CONFIG_BT_HCIBTUSB_RTL
+	exist_csr_module = 0;
+#endif
 
 	BT_DBG("intf %p", intf);
 
